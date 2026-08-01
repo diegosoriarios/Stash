@@ -1,0 +1,73 @@
+name: Android APK Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: >-
+          Release tag (e.g. v1.2.0). Leave empty to use
+          v<app version>-build<run number>.
+        required: false
+        type: string
+
+permissions:
+  contents: write
+
+jobs:
+  build-apk:
+    name: Build APK and publish release
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Setup Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: 24
+
+      - name: Setup Expo and EAS
+        uses: expo/expo-github-action@v8
+        with:
+          eas-version: latest
+          token: ${{ secrets.EXPO_TOKEN }}
+
+      - name: Resolve release tag
+        id: meta
+        env:
+          INPUT_TAG: ${{ inputs.tag }}
+        run: |
+          TAG="${INPUT_TAG:-}"
+          if [ -z "$TAG" ]; then
+            VERSION="$(node -p "require('./app.json').expo.version")"
+            TAG="v${VERSION}-build${{ github.run_number }}"
+          fi
+          echo "tag=${TAG}" >> "$GITHUB_OUTPUT"
+
+      - name: Build APK on EAS
+        id: eas
+        run: |
+          eas build --platform android --profile preview --non-interactive --wait --json > eas-build.json
+          APK_URL="$(jq -r '.[0].artifacts.buildUrl // .[0].artifacts.applicationArchiveUrl' eas-build.json)"
+          echo "apk_url=${APK_URL}" >> "$GITHUB_OUTPUT"
+
+      - name: Download APK
+        env:
+          APK_URL: ${{ steps.eas.outputs.apk_url }}
+          APK_FILE: Stash-${{ steps.meta.outputs.tag }}.apk
+        run: curl -fL --retry 3 -o "${APK_FILE}" "${APK_URL}"
+
+      - name: Publish GitHub Release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ steps.meta.outputs.tag }}
+          APK_FILE: Stash-${{ steps.meta.outputs.tag }}.apk
+        run: |
+          if ! gh release view "${TAG}" > /dev/null 2>&1; then
+            gh release create "${TAG}" \
+              --target "${{ github.sha }}" \
+              --title "Stash ${TAG}" \
+              --notes "Android APK build of Stash. Download \`${APK_FILE}\` and install it on your device."
+          fi
+          gh release upload "${TAG}" "${APK_FILE}" --clobber

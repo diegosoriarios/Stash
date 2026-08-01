@@ -16,6 +16,11 @@ Offline-first Expo (SDK 57, managed) app to track food at home: what you have, w
 - **Barcode:** `expo-camera` `CameraView` (expo-barcode-scanner is dead). Scanner → form hand-off uses `src/lib/scan-bus.ts` (module-level callback — the form stays mounted under the scanner; don't pass form state through router params).
 - **Date/time pickers:** `@react-native-community/datetimepicker` v9 — use `onValueChange` (`onChange` is deprecated); Android via `DateTimePickerAndroid.open`, iOS inline spinner.
 
+## Releases (Android APK)
+
+- EAS Build, `eas.json`: `preview` profile → installable APK (`android.buildType: apk`); `appVersionSource: remote` + `autoIncrement` so `versionCode` bumps every build (install over previous build without uninstalling). `android.package` in `app.json` is required by EAS — do not remove.
+- `.github/workflows/android-apk.yml`: manual (`workflow_dispatch`, optional tag input; default `v<version>-build<run#>`) → builds APK on EAS → publishes GitHub Release. Requires `EXPO_TOKEN` repo secret and the project linked to EAS (`extra.eas.projectId` in `app.json` via `npx eas init`).
+
 ## Verify
 
 - `npx tsc --noEmit`
