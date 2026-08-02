@@ -19,6 +19,7 @@ Offline-first Expo (SDK 57, managed) app to track food at home: what you have, w
 ## Releases (Android APK)
 
 - EAS Build, `eas.json`: `preview` profile → installable APK (`android.buildType: apk`); `appVersionSource: remote` + `autoIncrement` so `versionCode` bumps every build (install over previous build without uninstalling). `android.package` in `app.json` is required by EAS — do not remove.
+- APK size: `expo-build-properties` in `app.json` restricts to `arm64-v8a` + enables R8/resource shrinking → APK won't run on x86 emulators or 32-bit phones (universal APK ≈130 MB vs ≈30–45 MB arm64-only).
 - `.github/workflows/android-apk.yml`: manual (`workflow_dispatch`, optional tag input; default `v<version>-build<run#>`) → builds APK on EAS → publishes GitHub Release. Requires `EXPO_TOKEN` repo secret and the project linked to EAS (`extra.eas.projectId` in `app.json` via `npx eas init`).
 
 ## Verify
